@@ -6,8 +6,8 @@ function app() {
     settingsOpen:     false,
     modalOpen:        false,
     codeCopied:       false,
-    signalingUrl:     'http://localhost:3000',
-    theme:            'dark',
+    signalingUrl: localStorage.getItem('signalingUrl') || 'http://localhost:3000',
+    theme : localStorage.getItem("theme") || "dark",
     selectedFile:     null,
     dragOver:         false,
     receiveCode:      '',
@@ -82,7 +82,7 @@ function app() {
     },
 
     saveSettings() {
-      sessionStorage.setItem('signalingUrl', this.signalingUrl);
+      localStorage.setItem('signalingUrl', this.signalingUrl);
       AppState.signalingUrl = this.signalingUrl;
       SocketManager.connect(this.signalingUrl);
       this.settingsOpen = false;

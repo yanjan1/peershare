@@ -1,0 +1,106 @@
+# =========================
+# Dependencies
+# =========================
+node_modules/
+
+# pnpm
+.pnpm-store/
+
+# npm
+npm-debug.log*
+package-lock.json
+
+# yarn
+yarn.lock
+yarn-debug.log*
+yarn-error.log*
+
+# bun
+bun.lockb
+
+# =========================
+# Build outputs
+# =========================
+dist/
+build/
+out/
+coverage/
+.next/
+.nuxt/
+.svelte-kit/
+.vite/
+.cache/
+.tmp/
+temp/
+
+# =========================
+# Environment files
+# =========================
+.env
+.env.*
+!.env.example
+
+# =========================
+# Logs
+# =========================
+logs/
+*.log
+
+# =========================
+# OS junk
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# IDE / Editor
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# Runtime / PID
+# =========================
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# =========================
+# Testing
+# =========================
+.nyc_output/
+
+# =========================
+# Recursive ignores
+# =========================
+
+# Ignore ANY nested node_modules recursively
+**/node_modules/
+
+# Ignore nested dist/build folders
+**/dist/
+**/build/
+
+# Ignore nested coverage folders
+**/coverage/
+
+# Ignore nested cache folders
+**/.cache/
+
+# Ignore nested env files
+**/.env
+**/.env.*
+
+# Ignore nested logs
+**/*.log
+
+# =========================
+# Optional binary junk
+# =========================
+*.exe
+*.dll
+*.so
+*.dylib

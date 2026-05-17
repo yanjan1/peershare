@@ -4,7 +4,7 @@
 window.AppState = {
   // Socket connection
   connected: false,
-  signalingUrl: 'http://localhost:3000',
+  signalingUrl: localStorage.getItem('signalingUrl') || 'http://localhost:3000',
 
   // Current role: null | 'sender' | 'receiver'
   role: null,
@@ -37,6 +37,7 @@ window.AppState = {
   activeTab: 'send',
   errorMessage: null,
   statusMessage: null,
+  theme : localStorage.getItem("theme") || "dark",
 
   reset() {
     this.role = null;
