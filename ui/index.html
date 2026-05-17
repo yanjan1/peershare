@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>p2p-share</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" />
+  <link rel="stylesheet" href="css/app.css" />
+</head>
+<body>
+
+<!-- File input lives outside Alpine so it's always in the DOM -->
+<input type="file" id="fileInput" style="display:none"
+  onchange="document.dispatchEvent(new CustomEvent('file:selected', {detail: {file: this.files[0]}}))" />
+
+<div class="app-wrap" x-data="app()">
+
+  <!-- Header -->
+  <header class="app-header">
+    <div class="app-logo">
+      <div class="logo-mark">P2P</div>
+      <div class="logo-text">p2p<span>share</span></div>
+    </div>
+    <div class="header-right">
+      <div class="conn-status" :class="connected ? 'online' : 'offline'">
+        <div class="conn-dot"></div>
+        <span x-text="connected ? 'connected' : 'offline'"></span>
+      </div>
+      <button class="btn-icon" @click="toggleTheme()" :title="theme==='dark' ? 'Light mode' : 'Dark mode'" x-text="theme==='dark' ? '☀' : '☾'"></button>
+      <button class="btn-icon" @click="settingsOpen = !settingsOpen" title="Settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Offline banner -->
+  <div class="conn-warning" x-show="!connected">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+    Not connected to signaling server. Open Settings to configure the URL.
+  </div>
+
+  <!-- Settings panel -->
+  <div class="settings-overlay" x-show="settingsOpen" @click.self="settingsOpen = false">
+    <div class="settings-panel" @click.stop>
+      <div class="settings-header">Settings</div>
+      <div class="settings-body">
+        <label class="form-label">Signaling Server URL</label>
+        <input class="form-input" type="url" x-model="signalingUrl"
+               placeholder="http://localhost:3000" @keydown.enter="saveSettings()" />
+        <p class="form-hint mt-3">Default: <span style="color:var(--text-muted)">http://localhost:3000</span></p>
+        <button class="btn btn-primary btn-full mt-4" @click="saveSettings()">Save &amp; Reconnect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main -->
+  <main class="app-main">
+
+    <div class="tab-strip">
+      <button class="tab-btn" :class="{ active: activeTab === 'send' }"    @click="activeTab = 'send'">↑ Send</button>
+      <button class="tab-btn" :class="{ active: activeTab === 'receive' }" @click="activeTab = 'receive'">↓ Receive</button>
+    </div>
+
+    <!-- Send tab -->
+    <div x-show="activeTab === 'send'">
+      <div class="panel">
+        <div class="receive-header">
+          <div class="receive-icon">↑</div>
+        <div>
+        <div class="receive-title">Send a file</div>
+        <div class="receive-sub">Choose a file and generate a transfer code</div>
+        </div>
+        </div>
+
+        <div class="drop-zone" :class="{ 'drag-over': dragOver }"
+             x-show="!selectedFile"
+             @click="document.getElementById('fileInput').click()"
+             @dragover.prevent="dragOver = true"
+             @dragleave.prevent="dragOver = false"
+             @drop.prevent="handleDrop($event)">
+          <div class="drop-icon">⊕</div>
+          <div class="drop-primary">Drop file here</div>
+          <div class="drop-sub">or click to browse</div>
+        </div>
+
+        <div class="file-selected" x-show="selectedFile">
+          <div class="file-icon-wrap">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" style="color:var(--accent)">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14 2 14 8 20 8"/>
+            </svg>
+          </div>
+          <div style="min-width:0;flex:1">
+            <div class="file-name" x-text="selectedFile ? selectedFile.name : ''"></div>
+            <div class="file-size" x-text="selectedFile ? formatBytes(selectedFile.size) : ''"></div>
+          </div>
+          <button class="btn btn-ghost" style="font-size:20px;padding:2px 8px;flex-shrink:0" @click="clearFile()">×</button>
+        </div>
+
+        <button class="btn btn-primary btn-full mt-4" @click="startSend()" :disabled="!selectedFile || !connected">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+          Start Transfer
+        </button>
+      </div>
+    </div>
+
+    <!-- Receive tab -->
+    <div x-show="activeTab === 'receive'">
+      <div class="panel">
+        <div class="receive-header">
+          <div class="receive-icon">↓</div>
+          <div>
+            <div class="receive-title">Enter transfer code</div>
+            <div class="receive-sub">Ask the sender for their 6-character code</div>
+          </div>
+        </div>
+
+        <!-- Individual character boxes -->
+        <div class="code-boxes" id="codeBoxes">
+          <input class="code-box" type="text" maxlength="1" inputmode="text"
+                 autocomplete="off" spellcheck="false" data-index="0"
+                 @input="handleCodeInput($event, 0)"
+                 @keydown="handleCodeKey($event, 0)"
+                 @paste="handleCodePaste($event)" />
+          <input class="code-box" type="text" maxlength="1" inputmode="text"
+                 autocomplete="off" spellcheck="false" data-index="1"
+                 @input="handleCodeInput($event, 1)"
+                 @keydown="handleCodeKey($event, 1)" />
+          <input class="code-box" type="text" maxlength="1" inputmode="text"
+                 autocomplete="off" spellcheck="false" data-index="2"
+                 @input="handleCodeInput($event, 2)"
+                 @keydown="handleCodeKey($event, 2)" />
+          <div class="code-sep">—</div>
+          <input class="code-box" type="text" maxlength="1" inputmode="text"
+                 autocomplete="off" spellcheck="false" data-index="3"
+                 @input="handleCodeInput($event, 3)"
+                 @keydown="handleCodeKey($event, 3)" />
+          <input class="code-box" type="text" maxlength="1" inputmode="text"
+                 autocomplete="off" spellcheck="false" data-index="4"
+                 @input="handleCodeInput($event, 4)"
+                 @keydown="handleCodeKey($event, 4)" />
+          <input class="code-box" type="text" maxlength="1" inputmode="text"
+                 autocomplete="off" spellcheck="false" data-index="5"
+                 @input="handleCodeInput($event, 5)"
+                 @keydown="handleCodeKey($event, 5)" />
+        </div>
+
+        <button class="btn btn-primary btn-full mt-4" @click="startReceive()"
+                :disabled="receiveCode.trim().length < 6 || !connected">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="7 10 12 15 17 10"/>
+            <line x1="12" y1="15" x2="12" y2="3"/>
+          </svg>
+          Join Transfer
+        </button>
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div style="margin-top:32px">
+      <div class="meta-grid">
+        <div class="meta-cell"><div class="meta-key">Developed by</div><div class="meta-val">Yanjanendra Kafaltiya</div></div>
+        <div class="meta-cell"><div class="meta-key">Submitted to</div><div class="meta-val">Amrapali University</div></div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- DEBUG PANEL — Alt+1 to toggle -->
+  <div id="debug-panel" style="
+    display: none;
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    background: #0a0a0a;
+    border-top: 1px solid #2a2a2a;
+    font-family: monospace;
+    font-size: 11px;
+    color: #aaa;
+    z-index: 9999;
+    padding: 6px 12px;
+    gap: 16px;
+    flex-wrap: wrap;
+    align-items: center;
+  ">
+    <span style="color:#555;font-size:10px;letter-spacing:.1em">DEBUG</span>
+    <span>connected: <strong :style="connected ? 'color:#00e5a0' : 'color:#f44'" x-text="connected"></strong></span>
+    <span>modalOpen: <strong :style="modalOpen ? 'color:#00e5a0' : 'color:#f44'" x-text="modalOpen"></strong></span>
+    <span>transferState: <strong style="color:#f5c518" x-text="transferState"></strong></span>
+    <span>role: <strong style="color:#aaa" x-text="role || 'null'"></strong></span>
+    <span>code: <strong style="color:#aaa" x-text="code || 'null'"></strong></span>
+    <span>progress: <strong style="color:#aaa" x-text="progress + '%'"></strong></span>
+    <span>selectedFile: <strong style="color:#aaa" x-text="selectedFile ? selectedFile.name : 'null'"></strong></span>
+    <button onclick="window._app && console.table({...window._app})" style="
+      margin-left: auto;
+      background: #1e1e1e;
+      border: 1px solid #333;
+      color: #aaa;
+      font-family: monospace;
+      font-size: 10px;
+      padding: 2px 8px;
+      cursor: pointer;
+      letter-spacing: .05em;
+    ">log state</button>
+    <button onclick="if(window._app){window._app.update({modalOpen:true,role:'sender',transferState:'waiting',code:'TEST12',fileMeta:{name:'test.txt',size:1234}});console.log('forced modalOpen:',window._app.modalOpen);}else{console.error('_app not set!');}" style="background:#1e1e1e;border:1px solid #00e5a0;color:#00e5a0;font-family:monospace;font-size:10px;padding:2px 8px;cursor:pointer;">force modal</button>
+  </div>
+  <script>
+    document.addEventListener('keydown', function(e) {
+      if (e.altKey && e.key === '1') {
+        var p = document.getElementById('debug-panel');
+        p.style.display = p.style.display === 'flex' ? 'none' : 'flex';
+      }
+    });
+  </script>
+
+  <!-- Transfer Modal — rendered always, toggled via CSS class not x-show -->
+  <div class="transfer-modal-overlay" :style="modalOpen ? 'display:flex' : 'display:none'" @click.self="closeModal()">
+    <div class="transfer-modal" @click.stop>
+
+      <div class="transfer-modal-header">
+        <div class="transfer-modal-title" x-text="role === 'sender' ? '↑ Sending File' : '↓ Receiving File'"></div>
+        <button class="btn-icon" @click="closeModal()">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="transfer-modal-body">
+
+        <!-- Error state -->
+        <template x-if="transferError">
+          <div class="error-box">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:1px">
+              <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+            <span x-text="errorMessage || 'An error occurred.'"></span>
+          </div>
+        </template>
+
+        <!-- Sender waiting: show code -->
+        <template x-if="role === 'sender' && !transferDone && !transferError">
+          <div class="code-display">
+            <div class="code-label">Share this code with the receiver</div>
+            <div class="code-value" x-text="formatCode(code)"></div>
+            <button class="btn btn-outline" style="margin:0 auto;display:flex" @click="copyCode()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+              </svg>
+              <span x-text="codeCopied ? 'Copied!' : 'Copy Code'"></span>
+            </button>
+          </div>
+        </template>
+
+        <!-- Sender done -->
+        <template x-if="transferDone && role === 'sender'">
+          <div class="success-box">
+            <div class="success-icon">✓</div>
+            <div class="success-text">File sent successfully</div>
+          </div>
+        </template>
+
+        <!-- File info (always show if we have it) -->
+        <template x-if="fileMeta">
+          <div class="meta-grid">
+            <div class="meta-cell">
+              <div class="meta-key">File</div>
+              <div class="meta-val" x-text="fileMeta.name"></div>
+            </div>
+            <div class="meta-cell">
+              <div class="meta-key">Size</div>
+              <div class="meta-val" x-text="formatBytes(fileMeta.size)"></div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Progress bar -->
+        <template x-if="transferring || transferDone">
+          <div class="progress-wrap">
+            <div class="progress-header">
+              <span class="progress-label" x-text="progressLabel"></span>
+              <span class="progress-pct" x-text="progress + '%'"></span>
+            </div>
+            <div class="progress-track">
+              <div class="progress-bar" :style="'width:' + progress + '%'"></div>
+            </div>
+            <div class="progress-bytes"
+                 x-text="formatBytes(bytesTransferred) + (fileMeta ? ' / ' + formatBytes(fileMeta.size) : '')"></div>
+          </div>
+        </template>
+
+        <!-- Receiver waiting -->
+        <template x-if="role === 'receiver' && transferWaiting">
+          <div>
+            <div class="status-waiting">
+              <div class="waiting-dot"></div>
+              <div class="waiting-dot"></div>
+              <div class="waiting-dot"></div>
+            </div>
+            <p style="text-align:center;color:var(--text-muted);font-size:12px;margin-top:8px" x-text="statusMessage || 'Waiting for sender...'"></p>
+          </div>
+        </template>
+
+        <!-- Receiver download -->
+        <template x-if="role === 'receiver' && transferDone">
+          <div>
+            <div class="success-box">
+              <div class="success-icon">↓</div>
+              <div class="success-text">File received</div>
+            </div>
+            <button class="btn btn-primary btn-full mt-3" @click="downloadFile()">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              <span x-text="'Download ' + (fileMeta ? fileMeta.name : 'File')"></span>
+            </button>
+          </div>
+        </template>
+
+      </div>
+
+      <div class="transfer-modal-footer">
+        <button class="btn btn-danger" @click="closeModal()"
+                x-text="transferDone ? 'Close' : 'Cancel Transfer'"></button>
+      </div>
+
+    </div>
+  </div>
+
+</div><!-- /app-wrap -->
+
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script src="js/state.js"></script>
+<script src="js/socket.js"></script>
+<script src="js/webrtc.js"></script>
+<script src="js/transfer.js"></script>
+<script src="js/app.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.3/dist/cdn.min.js"></script>
+</body>
+</html>
