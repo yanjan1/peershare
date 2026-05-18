@@ -104,3 +104,44 @@ pids/
 *.dll
 *.so
 *.dylib
+
+#================
+# rust stuff
+#================
+# --- Rust Backend ---
+# The target directory contains all compiled binary artifacts
+/src-tauri/target/
+# Cargo-generated files that shouldn't be tracked (unless it's a binary crate)
+# Note: Keep Cargo.lock for apps to ensure deterministic builds
+# /src-tauri/Cargo.lock 
+
+# --- Frontend ---
+# Dependencies and build output
+node_modules/
+dist/
+build/
+.svelte-kit/
+.next/
+out/
+
+# --- Tauri & Mobile ---
+# Mobile build artifacts (Tauri v2)
+/src-tauri/gen/
+/src-tauri/mobile/android/
+/src-tauri/mobile/ios/
+
+# --- Environmental / Secret Files ---
+.env
+*.env.local
+.env.*.local
+
+# --- OS Specific ---
+.DS_Store
+Thumbs.db
+
+# --- IDEs ---
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea/
+*.swp
