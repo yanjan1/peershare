@@ -161,7 +161,6 @@ router.post('/:messageId/read', authMiddleware, async (req, res) => {
 router.post('/sync', authMiddleware, async (req, res) => {
   try {
     const userId = req.user.userId;
-    const { lastSyncTime } = req.body;
 
     // Get unread messages
     const unreadMessages = await dbAll(
@@ -177,17 +176,23 @@ router.post('/sync', authMiddleware, async (req, res) => {
     // Get active chat sessions
     const chatSessions = await dbAll(
       `SELECT cs.id, cs.user_id_1, cs.user_id_2, 
-              u.id as other_user_id, u.username, u.avatar_url, u.status,
+              CASE 
+                WHEN cs.user_id_1 = ? THEN cs.user_id_2
+                ELSE cs.user_id_1
+              END as other_user_id,
+              u.id, u.username, u.avatar_url, u.status,
               m.id as last_message_id, m.content as last_message_content, m.created_at as last_message_time
        FROM chat_sessions cs
-       JOIN users u ON CASE 
-         WHEN cs.user_id_1 = ? THEN u.id = cs.user_id_2
-         ELSE u.id = cs.user_id_1
-       END
+       JOIN users u ON (
+         CASE 
+           WHEN cs.user_id_1 = ? THEN u.id = cs.user_id_2
+           ELSE u.id = cs.user_id_1
+         END
+       )
        LEFT JOIN messages m ON m.id = cs.last_message_id
        WHERE cs.user_id_1 = ? OR cs.user_id_2 = ?
        ORDER BY cs.updated_at DESC`,
-      [userId, userId, userId]
+      [userId, userId, userId, userId]
     );
 
     const parsedMessages = unreadMessages.map(msg => ({
@@ -217,7 +222,7 @@ router.get('/unread-count', authMiddleware, async (req, res) => {
       [userId]
     );
 
-    res.json({ unreadCount: result.count });
+    res.json({ unreadCount: result.count || 0 });
   } catch (err) {
     console.error('[messages] unread-count error:', err);
     res.status(500).json({ error: 'Failed to get unread count' });
