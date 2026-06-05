@@ -5,7 +5,7 @@ const router = express.Router();
 const { authMiddleware, generateId } = require('../auth');
 const { dbRun, dbGet, dbAll } = require('../db');
 
-// ── GET /users/search?q=query ───────────────────────────────────────────
+// ── GET /api/users/search?q=query ───────────────────────────────────────
 router.get('/search', authMiddleware, async (req, res) => {
   try {
     const { q } = req.query;
@@ -18,6 +18,7 @@ router.get('/search', authMiddleware, async (req, res) => {
     const users = await dbAll(
       `SELECT id, username, avatar_url, status FROM users 
        WHERE (username LIKE ? OR email LIKE ?) AND id != ?
+       ORDER BY username ASC
        LIMIT 20`,
       [`%${q}%`, `%${q}%`, userId]
     );
@@ -29,7 +30,7 @@ router.get('/search', authMiddleware, async (req, res) => {
   }
 });
 
-// ── GET /users/:userId ──────────────────────────────────────────────────
+// ── GET /api/users/:userId ──────────────────────────────────────────────
 router.get('/:userId', authMiddleware, async (req, res) => {
   try {
     const { userId } = req.params;
@@ -50,7 +51,7 @@ router.get('/:userId', authMiddleware, async (req, res) => {
   }
 });
 
-// ── GET /users/:userId/status ───────────────────────────────────────────
+// ── GET /api/users/:userId/status ───────────────────────────────────────
 router.get('/:userId/status', async (req, res) => {
   try {
     const { userId } = req.params;
