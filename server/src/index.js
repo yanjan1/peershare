@@ -10,6 +10,7 @@ const { decodeToken } = require('./auth');
 const authRoutes = require('./routes/auth');
 const usersRoutes = require('./routes/users');
 const friendsRoutes = require('./routes/friends');
+const messagesRoutes = require('./routes/messages');
 
 const PORT = process.env.PORT || 3000;
 const ALLOWED_ORIGIN = process.env.ALLOWED_ORIGIN || 'http://localhost:7337';
@@ -30,8 +31,9 @@ initSchema();
 app.use('/api/auth', authRoutes);
 app.use('/api/users', usersRoutes);
 app.use('/api/friends', friendsRoutes);
+app.use('/api/messages', messagesRoutes);
 
-// ── Health check ─────────────────────────────────────────────────────────
+// ── Health check ─────────────────────────────────────────────────────
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', uptime: process.uptime(), version: '2.0.0' });
 });
@@ -39,6 +41,7 @@ app.get('/health', (_req, res) => {
 // ── Socket.IO: Connection & Presence ─────────────────────────────────────
 
 const connectedUsers = new Map(); // userId -> { socketId, username, status }
+const userSockets = new Map(); // userId -> Set of socketIds (for multiple connections)
 
 io.on('connection', (socket) => {
   console.log(`[socket] connected: ${socket.id}`);
@@ -61,6 +64,12 @@ io.on('connection', (socket) => {
       status: 'online',
     });
 
+    // Track multiple sockets per user
+    if (!userSockets.has(userId)) {
+      userSockets.set(userId, new Set());
+    }
+    userSockets.get(userId).add(socket.id);
+
     socket.userId = userId;
     socket.username = username;
     socket.join(`user:${userId}`);
@@ -80,6 +89,56 @@ io.on('connection', (socket) => {
     socket.emit('online_users', { users: onlineUsers });
   });
 
+  // ── Chat Messages (P2P, real-time) ───────────────────────────────────
+  socket.on('chat_message', ({ toUserId, content, messageType = 'text', messageId }) => {
+    if (!socket.userId) {
+      socket.emit('error', { message: 'Not authenticated' });
+      return;
+    }
+
+    // Check if recipient is online
+    const recipientConnected = connectedUsers.has(toUserId);
+
+    // Emit message to recipient if online
+    io.to(`user:${toUserId}`).emit('chat_message', {
+      id: messageId,
+      fromUserId: socket.userId,
+      fromUsername: socket.username,
+      toUserId,
+      content,
+      messageType,
+      delivered: recipientConnected,
+      created_at: new Date().toISOString(),
+    });
+
+    // Confirm to sender
+    socket.emit('message_sent', {
+      messageId,
+      delivered: recipientConnected,
+      deliveredAt: new Date().toISOString(),
+    });
+
+    console.log(`[chat] message: ${socket.userId} -> ${toUserId} (delivered: ${recipientConnected})`);
+  });
+
+  // ── Typing Indicators ────────────────────────────────────────────────
+  socket.on('typing', ({ toUserId, isTyping }) => {
+    io.to(`user:${toUserId}`).emit('user_typing', {
+      fromUserId: socket.userId,
+      fromUsername: socket.username,
+      isTyping,
+    });
+  });
+
+  // ── Read Receipts ───────────────────────────────────────────────────
+  socket.on('message_read', ({ toUserId, messageId }) => {
+    io.to(`user:${toUserId}`).emit('message_read_receipt', {
+      fromUserId: socket.userId,
+      messageId,
+      readAt: new Date().toISOString(),
+    });
+  });
+
   // ── WebRTC Signaling (for file transfer in chat) ────────────────────
   socket.on('signal', ({ toUserId, payload, code }) => {
     const toSocket = io.to(`user:${toUserId}`);
@@ -95,13 +154,15 @@ io.on('connection', (socket) => {
   });
 
   // ── File transfer events (WebRTC DataChannel) ────────────────────────
-  socket.on('transfer_start', ({ toUserId, code }) => {
+  socket.on('transfer_start', ({ toUserId, code, fileName, fileSize }) => {
     io.to(`user:${toUserId}`).emit('transfer_start', {
       fromUserId: socket.userId,
       fromUsername: socket.username,
       code,
+      fileName,
+      fileSize,
     });
-    console.log(`[transfer] started: ${socket.userId} -> ${toUserId}`);
+    console.log(`[transfer] started: ${socket.userId} -> ${toUserId} (${fileName})`);
   });
 
   socket.on('transfer_progress', ({ toUserId, code, percent, bytes }) => {
@@ -112,20 +173,20 @@ io.on('connection', (socket) => {
     });
   });
 
-  socket.on('transfer_complete', ({ toUserId, code }) => {
+  socket.on('transfer_complete', ({ toUserId, code, fileName }) => {
     io.to(`user:${toUserId}`).emit('transfer_complete', {
       code,
       fromUserId: socket.userId,
+      fileName,
     });
-    console.log(`[transfer] complete: ${socket.userId} -> ${toUserId}`);
+    console.log(`[transfer] complete: ${socket.userId} -> ${toUserId} (${fileName})`);
   });
 
-  // ── Typing indicators ────────────────────────────────────────────────
-  socket.on('typing', ({ toUserId, isTyping }) => {
-    io.to(`user:${toUserId}`).emit('user_typing', {
+  socket.on('transfer_error', ({ toUserId, code, error }) => {
+    io.to(`user:${toUserId}`).emit('transfer_error', {
+      code,
       fromUserId: socket.userId,
-      fromUsername: socket.username,
-      isTyping,
+      error,
     });
   });
 
@@ -137,14 +198,30 @@ io.on('connection', (socket) => {
     });
   });
 
+  socket.on('chat_disconnecting', ({ withUserId }) => {
+    io.to(`user:${withUserId}`).emit('chat_peer_offline', {
+      userId: socket.userId,
+      username: socket.username,
+    });
+  });
+
   // ── Disconnection ────────────────────────────────────────────────────
   socket.on('disconnect', () => {
     const userId = socket.userId;
 
     if (userId) {
-      connectedUsers.delete(userId);
-      io.emit('user_offline', { userId, status: 'offline' });
-      console.log(`[socket] user disconnected: ${userId}`);
+      // Remove socket from user's connection set
+      if (userSockets.has(userId)) {
+        userSockets.get(userId).delete(socket.id);
+        
+        // Only mark offline if no other connections
+        if (userSockets.get(userId).size === 0) {
+          connectedUsers.delete(userId);
+          userSockets.delete(userId);
+          io.emit('user_offline', { userId, status: 'offline' });
+          console.log(`[socket] user fully disconnected: ${userId}`);
+        }
+      }
     }
 
     console.log(`[socket] disconnected: ${socket.id}`);
