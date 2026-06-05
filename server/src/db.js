@@ -19,7 +19,7 @@ const db = new sqlite3.Database(DB_PATH, (err) => {
 // Enable foreign keys
 db.run('PRAGMA foreign_keys = ON');
 
-// ── Initialize schema ────────────────────────────────────────────────────
+// ── Initialize schema ────────────────────────────────────────────────
 function initSchema() {
   db.serialize(() => {
     // Users table
@@ -76,11 +76,40 @@ function initSchema() {
       )
     `);
 
+    // Messages table (for chat history and offline caching)
+    db.run(`
+      CREATE TABLE IF NOT EXISTS messages (
+        id TEXT PRIMARY KEY,
+        from_user_id TEXT NOT NULL,
+        to_user_id TEXT NOT NULL,
+        content TEXT NOT NULL,
+        message_type TEXT DEFAULT 'text',
+        file_metadata TEXT,
+        is_read BOOLEAN DEFAULT 0,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (from_user_id) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (to_user_id) REFERENCES users(id) ON DELETE CASCADE)
+    `);
+
+    // Chat sessions table (tracks active conversations)
+    db.run(`
+      CREATE TABLE IF NOT EXISTS chat_sessions (
+        id TEXT PRIMARY KEY,
+        user_id_1 TEXT NOT NULL,
+        user_id_2 TEXT NOT NULL,
+        last_message_id TEXT,
+        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id_1) REFERENCES users(id) ON DELETE CASCADE,
+        FOREIGN KEY (user_id_2) REFERENCES users(id) ON DELETE CASCADE,
+        UNIQUE(user_id_1, user_id_2)
+      )
+    `);
+
     console.log('[db] schema initialized');
   });
 }
 
-// ── Helper functions ────────────────────────────────────────────────────
+// ── Helper functions ────────────────────────────────────────────────
 
 function dbRun(sql, params = []) {
   return new Promise((resolve, reject) => {
