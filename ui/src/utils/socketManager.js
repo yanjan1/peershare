@@ -51,7 +51,7 @@ class SocketManager {
     this.serverURL = process.env.REACT_APP_SOCKET_URL || 'http://localhost:3000';
   }
 
-  // ── Connection Management ──────────────────────────────────────────
+  // ── Connection Management ───────────────────────────────────────────────
   connect(token) {
     if (this.socket && this.socket.connected) {
       return Promise.resolve();
@@ -106,7 +106,7 @@ class SocketManager {
     return this.socket && this.socket.connected;
   }
 
-  // ── Event Listeners ────────────────────────────────────────────────
+  // ── Event Listeners ─────────────────────────────────────────────────────
   on(event, callback) {
     if (!this.listeners[event]) {
       this.listeners[event] = [];
@@ -133,7 +133,7 @@ class SocketManager {
     }
   }
 
-  // ── Chat Methods ───────────────────────────────────────────────────
+  // ── Chat Methods ────────────────────────────────────────────────────────
   sendMessage(toUserId, content, messageId) {
     this.emit(SOCKET_EVENTS.CHAT_MESSAGE, {
       toUserId,
@@ -157,7 +157,7 @@ class SocketManager {
     });
   }
 
-  // ── WebRTC Signaling ───────────────────────────────────────────────
+  // ── WebRTC Signaling ────────────────────────────────────────────────────
   sendSignal(toUserId, payload, code) {
     this.emit(SOCKET_EVENTS.SIGNAL, {
       toUserId,
@@ -200,7 +200,7 @@ class SocketManager {
     });
   }
 
-  // ── Connection State ───────────────────────────────────────────────
+  // ── Connection State ────────────────────────────────────────────────────
   notifyChatConnected(withUserId) {
     this.emit(SOCKET_EVENTS.CHAT_CONNECTED, {
       withUserId,

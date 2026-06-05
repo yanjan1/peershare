@@ -14,7 +14,7 @@ const STORAGE_KEYS = {
 };
 
 class LocalStorageManager {
-  // ── Authentication ──────────────────────────────────────────────────
+  // ── Authentication ──────────────────────────────────────────────────────
   saveToken(token) {
     localStorage.setItem(STORAGE_KEYS.AUTH_TOKEN, token);
   }
@@ -27,7 +27,7 @@ class LocalStorageManager {
     localStorage.removeItem(STORAGE_KEYS.AUTH_TOKEN);
   }
 
-  // ── Current User ────────────────────────────────────────────────────
+  // ── Current User ────────────────────────────────────────────────────────
   saveCurrentUser(user) {
     localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
   }
@@ -37,7 +37,7 @@ class LocalStorageManager {
     return user ? JSON.parse(user) : null;
   }
 
-  // ── Conversations ───────────────────────────────────────────────────
+  // ── Conversations ───────────────────────────────────────────────────────
   saveConversations(conversations) {
     localStorage.setItem(STORAGE_KEYS.CONVERSATIONS, JSON.stringify(conversations));
   }
@@ -58,7 +58,7 @@ class LocalStorageManager {
     this.saveConversations(convs);
   }
 
-  // ── Messages Cache ──────────────────────────────────────────────────
+  // ── Messages Cache ──────────────────────────────────────────────────────
   // Stores messages per conversation (userId -> messages[])
   saveMessages(userId, messages) {
     const cache = this.getMessagesCache();
@@ -93,7 +93,7 @@ class LocalStorageManager {
     localStorage.setItem(STORAGE_KEYS.MESSAGE_CACHE, JSON.stringify(cache));
   }
 
-  // ── Pending Messages ────────────────────────────────────────────────
+  // ── Pending Messages ────────────────────────────────────────────────────
   // Messages waiting to be sent when online
   getPendingMessages() {
     const pending = localStorage.getItem(STORAGE_KEYS.PENDING_MESSAGES);
@@ -119,7 +119,7 @@ class LocalStorageManager {
     localStorage.removeItem(STORAGE_KEYS.PENDING_MESSAGES);
   }
 
-  // ── Friends List ────────────────────────────────────────────────────
+  // ── Friends List ────────────────────────────────────────────────────────
   saveFriends(friends) {
     localStorage.setItem(STORAGE_KEYS.FRIENDS_LIST, JSON.stringify(friends));
   }
@@ -129,7 +129,7 @@ class LocalStorageManager {
     return friends ? JSON.parse(friends) : [];
   }
 
-  // ── Sync Tracking ───────────────────────────────────────────────────
+  // ── Sync Tracking ───────────────────────────────────────────────────────
   saveLastSyncTime(timestamp) {
     localStorage.setItem(STORAGE_KEYS.LAST_SYNC, timestamp);
   }
@@ -138,7 +138,7 @@ class LocalStorageManager {
     return localStorage.getItem(STORAGE_KEYS.LAST_SYNC);
   }
 
-  // ── Clear All ───────────────────────────────────────────────────────
+  // ── Clear All ───────────────────────────────────────────────────────────
   clearAll() {
     Object.values(STORAGE_KEYS).forEach(key => {
       localStorage.removeItem(key);

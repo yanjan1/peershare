@@ -37,7 +37,7 @@ class APIClient {
     return data;
   }
 
-  // ── Auth Endpoints ─────────────────────────────────────────────────
+  // ── Auth Endpoints ──────────────────────────────────────────────────────
   async signup(username, email, password) {
     return this.request('/auth/signup', {
       method: 'POST',
@@ -63,7 +63,7 @@ class APIClient {
     });
   }
 
-  // ── Users Endpoints ────────────────────────────────────────────────
+  // ── Users Endpoints ─────────────────────────────────────────────────────
   async searchUsers(query) {
     return this.request(`/users/search?q=${encodeURIComponent(query)}`);
   }
@@ -76,7 +76,7 @@ class APIClient {
     return this.request(`/users/${userId}/status`);
   }
 
-  // ── Friends Endpoints ──────────────────────────────────────────────
+  // ── Friends Endpoints ───────────────────────────────────────────────────
   async sendFriendRequest(toUserId) {
     return this.request('/friends/request', {
       method: 'POST',
@@ -110,7 +110,7 @@ class APIClient {
     });
   }
 
-  // ── Messages Endpoints ─────────────────────────────────────────────
+  // ── Messages Endpoints ──────────────────────────────────────────────────
   async sendMessage(toUserId, content, messageType = 'text', fileMetadata = null) {
     return this.request('/messages/send', {
       method: 'POST',

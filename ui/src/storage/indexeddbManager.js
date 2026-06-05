@@ -16,7 +16,7 @@ class IndexedDBManager {
     this.db = null;
   }
 
-  // ── Initialize Database ────────────────────────────────────────────
+  // ── Initialize Database ─────────────────────────────────────────────────
   async init() {
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -53,7 +53,7 @@ class IndexedDBManager {
     });
   }
 
-  // ── Messages Operations ─────────────────────────────────────────────
+  // ── Messages Operations ──────────────────────────────────────────────────
   async saveMessage(message) {
     const tx = this.db.transaction([STORE_NAMES.MESSAGES], 'readwrite');
     const store = tx.objectStore(STORE_NAMES.MESSAGES);
@@ -82,7 +82,7 @@ class IndexedDBManager {
       const request = index.getAll(conversationId);
       request.onerror = () => reject(request.error);
       request.onsuccess = () => {
-        const messages = request.result.slice(-limit); // Get last N messages
+        const messages = request.result.slice(-limit);
         resolve(messages);
       };
     });
@@ -117,7 +117,7 @@ class IndexedDBManager {
     });
   }
 
-  // ── Conversations Operations ────────────────────────────────────────
+  // ── Conversations Operations ─────────────────────────────────────────────
   async saveConversation(conversation) {
     const tx = this.db.transaction([STORE_NAMES.CONVERSATIONS], 'readwrite');
     const store = tx.objectStore(STORE_NAMES.CONVERSATIONS);
@@ -148,7 +148,7 @@ class IndexedDBManager {
     });
   }
 
-  // ── Draft Messages ─────────────────────────────────────────────────
+  // ── Draft Messages ──────────────────────────────────────────────────────
   async saveDraft(conversationId, content) {
     const tx = this.db.transaction([STORE_NAMES.DRAFTS], 'readwrite');
     const store = tx.objectStore(STORE_NAMES.DRAFTS);
@@ -179,7 +179,7 @@ class IndexedDBManager {
     });
   }
 
-  // ── Clear All Data ─────────────────────────────────────────────────
+  // ── Clear All Data ──────────────────────────────────────────────────────
   async clearAll() {
     const tx = this.db.transaction(
       [STORE_NAMES.MESSAGES, STORE_NAMES.CONVERSATIONS, STORE_NAMES.DRAFTS],
