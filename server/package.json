@@ -1,7 +1,7 @@
 {
   "name": "p2p-share-server",
-  "version": "1.0.0",
-  "description": "WebRTC signaling server for p2p-share",
+  "version": "2.0.0",
+  "description": "P2P chat and file transfer server",
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
@@ -11,7 +11,9 @@
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^4.18.2",
-    "socket.io": "^4.7.2"
+    "jsonwebtoken": "^9.1.2",
+    "socket.io": "^4.7.2",
+    "sqlite3": "^5.1.6"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
